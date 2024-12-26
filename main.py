@@ -6,7 +6,7 @@ from pynput.keyboard import Controller
 import win32con
 import win32api
 import json
-    
+
 def send_key_to_window(hwnd, key=0x46):
     win32api.PostMessage(hwnd, win32con.WM_KEYDOWN, key, 0)
     time.sleep(random.random()*0.2+0.2)
@@ -114,42 +114,46 @@ def ask_user_choice():
             pass
         print("无效输入，请输入0、1或2。")
 
-    return foreground, remember
+        # 获取用户输入的循环次数
+    while True:
+        try:
+            loop_count = int(input("请输入循环次数："))
+            if loop_count > 0:
+                break
+        except ValueError:
+            print("无效输入，请输入一个正整数。")
+
+    return foreground, remember,loop_count
 
 info = load_info()
 foreground = info.get("foreground")
 remember_choice = info.get("remember_choice", 0)
-
+loop_count = info.get("loop_count", 130)
 if remember_choice == 0 or remember_choice == 2:
-    foreground, remember_choice = ask_user_choice()
+    foreground, remember_choice,loop_count = ask_user_choice()
 
     # 更新并保存选择
     info["foreground"] = foreground
     info["remember_choice"] = remember_choice
+    info["loop_count"] = loop_count
     save_info(info)
 
 if remember_choice == 2:
     print("已选择不再询问，请注意需手动删除info.txt以重新设置。")
-foreground = False
+
 keyboard.on_press(on_key_press)
 game_nd = init_window()
 if game_nd is not None:
-    tm = time.time()
-    end_time = tm + 60 * 60 * 6
     print("游戏窗口已找到，开始运行")
-    print(f"预计结束时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time))}")
-    time.sleep(1)
-    press()
 
-    while not stop and time.time() < end_time:
-        if int((time.time() - tm) // (30 * 60)) > 0 and int((time.time() - tm) % (30 * 60)) == 0:
-            print(f"已运行{int((time.time() - tm) // 60)}分钟，预计结束时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time))}")
-        time.sleep(random.random() * 1 + 2)
+    for _ in range(loop_count):
+        if stop:
+            print("运行已停止")
+            break
         press()
-
-    if stop:
-        print("运行已停止")
-    else:
-        print("运行时间已达6小时，自动停止")
+        time.sleep(random.random() * 1 + 2)
+    
+    if not stop:
+        print(f"已完成 {loop_count} 次循环。")
 
     time.sleep(1)
